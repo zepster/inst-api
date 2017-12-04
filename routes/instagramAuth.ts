@@ -15,7 +15,7 @@ export class AuthRoute {
 
     constructor() {
         this.router = express.Router();
-        this.ig = instagramNode.instagram()
+        this.ig = instagramNode['instagram']()
         this.setIgData({
             client_id: credentials.clientId,
             client_secret: credentials.secret,
