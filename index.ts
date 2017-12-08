@@ -3,6 +3,7 @@
 import * as bodyParser from "body-parser";
 import * as express from "express";
 import { AuthRoute } from './routes/instagramAuth'
+import { GitRepo } from './routes/gitRepo'
 
 export class Server {
 
@@ -19,7 +20,8 @@ export class Server {
     }
 
     routes() {
-        this.app.use('/ig', new AuthRoute().getHandlers())
+        // this.app.use('/ig', new AuthRoute().getHandlers())
+        this.app.use('/find', new GitRepo().getHandlers())
     }
 
     config() {
