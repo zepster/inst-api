@@ -4,6 +4,7 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import { AuthRoute } from './routes/instagramAuth'
 import { GitRepo } from './routes/gitRepo'
+import * as cors from 'cors'
 
 export class Server {
 
@@ -30,7 +31,8 @@ export class Server {
             extended: true
         }));
         this.app.set('views', './views')
-        this.app.set('view engine', 'pug')
+        this.app.set('view engine', 'pug');
+        this.app.use(cors())
     }
 
     start(port: number = 3000) {

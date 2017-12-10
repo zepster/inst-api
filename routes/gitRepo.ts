@@ -19,13 +19,19 @@ export class GitRepo {
     }
 
     repo(req: express.Request, res: express.Response, next: express.NextFunction) {
-        let loadData = parseRequest(req)
+        let loadData = parseRequest(req);
         loadData()
             .then(repos => {
+                repos.data = repos.data.map(r => ({
+                    id: r.id,
+                    owner: r.owner,
+                    full_name: r.full_name,
+                    stargazers_count: r.stargazers_count
+                }))
                 res.send(repos)
             })
             .catch(err => {
-                res.send({message: err.message})
+                res.status(500).send({message: err.message})
             })
     }
 

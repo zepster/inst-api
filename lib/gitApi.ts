@@ -2,27 +2,97 @@ import * as rp from 'request-promise'
 const API_ROOT = 'https://api.github.com/';
 
 export function parseRequest(req) {
-    let { page = null, repo } = req.query;
+    let { page = "1", repo } = req.query;
 
-    // update logic
-    if (page.indexOf(API_ROOT) !== -1) {
-        return function () {
-            return callApi(page)
-        }
-    } else {
+    if ( !repo ) {
+        throw new Error(`Param 'repo' is not required.`)
+    }
+
+    if (!page) {
         return function () {
             return callApi(`${API_ROOT}repos/${repo}/forks`)
+                .then(({link, rawBody}) => {
+                    return buildResponse(link, rawBody);
+                })
         }
     }
 
-}
- // parse headers
-export function callApi(endpoint) {
-    console.log(callApi, endpoint)
-    return rp({
-        url: endpoint,
-        headers: {
-            'User-Agent': 'Request-Promise'
+    if (page.indexOf(API_ROOT) !== -1) {
+        return function () {
+            return callApi(page)
+                .then(({link, rawBody}) => {
+                    return buildResponse(link, rawBody);
+                })
         }
-    })
+    }
+
+    if (!isNaN(parseInt(page)) && parseInt(page) === 1) {
+        return function () {
+            return callApi(`${API_ROOT}repos/${repo}/forks`)
+                .then(({link, rawBody}) => {
+                    return buildResponse(link, rawBody);
+                })
+        }
+    }
+
+    if (!isNaN(parseInt(page)) && parseInt(page) > 0) {
+        return function () {
+            return callApi(`${API_ROOT}repos/${repo}/forks`)
+                .then(({link, rawBody}) => {
+                    const lastPage = getPageUrl(link, 'last');
+                    if (!lastPage || parseInt(page) > lastPage.page) {
+                        return buildResponse(link, rawBody);
+                    } else {
+                        const newPage = lastPage.url.replace(/(^.*\?)page=\d*/, `$1page=${page}`);
+                        return callApi(newPage).then(({link, rawBody}) => buildResponse(link, rawBody));
+                    }
+                })
+        }
+    }
+
+    return function () {
+        return Promise.resolve(buildResponse());
+    }
+
 }
+
+export function callApi(endpoint) {
+    return rp({url: endpoint, headers: {'User-Agent': 'Request-Promise'}, resolveWithFullResponse: true})
+        .then(response => {
+            return {
+                link: response.headers['link'],
+                rawBody: response.body
+            }
+        }, response => {
+            throw new Error(JSON.parse(response.error).message)
+        })
+        .catch(err => {
+            throw err;
+        })
+}
+
+const parseLink = link => ({
+    firstUrl: getPageUrl(link, 'first'),
+    prevUrl: getPageUrl(link, 'prev'),
+    nextUrl: getPageUrl(link, 'next'),
+    lastUrl: getPageUrl(link, 'last'),
+})
+
+const getPageUrl = (link, rel) => {
+    if (!link) {
+        return null;
+    }
+    const _link = link.split(',').find(s => s.indexOf(`rel="${rel}"`) > -1)
+    if (!_link) {
+        return null;
+    }
+    return {
+        url: _link.trim().split(';')[0].slice(1, -1),
+        page: _link.trim().split(';')[0].slice(1, -1).match(/^.*\?page=(\d*)/)[1] || '1'
+    }
+}
+
+const buildResponse = (link = null, rawBody = null) => ({
+    ...parseLink(link),
+    data: rawBody ? JSON.parse(rawBody) : []
+})
