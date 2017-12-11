@@ -1,4 +1,5 @@
 import { Server } from '../index'
 
+const port = process.env.PORT || 3001;
 const app = Server.bootstrap()
-app.start(3001)
+app.start(port)
